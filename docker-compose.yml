@@ -71,10 +71,12 @@ services:
     networks:
       - pdf_net
 
-  # Microservicio de extracción (proyecto hermano ../Microservicios), 5 réplicas.
+  # Microservicio de extracción, construido desde GitHub (fijado a un commit para
+  # que el build sea reproducible). Se puede sobreescribir con EXTRACTOR_CONTEXT.
+  # 5 réplicas.
   extractor:
     build:
-      context: ${EXTRACTOR_CONTEXT:-../Microservicios}
+      context: ${EXTRACTOR_CONTEXT:-https://github.com/bar-bii/Microservicios.git#e66b17fc7ec9618bb212c05597e3c9be7edf7807}
       dockerfile: Dockerfile
     image: pdf-extractor-python:latest
     expose:

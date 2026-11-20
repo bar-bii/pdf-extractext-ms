@@ -43,7 +43,8 @@ Sin reintentos.
 ## Despliegue
 
 `docker-compose.yml`: MongoDB, la app, Traefik y 5 réplicas del extractor (1 CPU / 1 GB cada una), construido
-desde `../Microservicios`. La app lo alcanza por `http://traefik` dentro de la red interna.
+directamente desde GitHub (`bar-bii/Microservicios`, fijado a un commit; configurable con `EXTRACTOR_CONTEXT`),
+sin necesidad de clonarlo. La app lo alcanza por `http://traefik` dentro de la red interna.
 
 ## Tests (TDD)
 

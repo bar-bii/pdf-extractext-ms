@@ -32,14 +32,17 @@ Clean Architecture (`presentation → application ← data`):
 ## Requisitos
 
 - Python 3.13+ y [uv](https://docs.astral.sh/uv/)
-- Docker
-- El proyecto del microservicio de extracción (`Microservicios`) clonado como carpeta hermana (`../Microservicios`), o su ruta en `EXTRACTOR_CONTEXT`.
+- Docker (con acceso a internet en el primer build: la imagen del extractor se construye desde GitHub)
 
 ## Arranque
+
+Alcanza con clonar este repo. El microservicio de extracción **no hace falta clonarlo**: Docker lo construye directo desde [`bar-bii/Microservicios`](https://github.com/bar-bii/Microservicios), fijado a un commit para que el build sea reproducible.
 
 Stack completo (MongoDB + app + Traefik + 5 réplicas del extractor):
 
 ```bash
+git clone https://github.com/frankito-re/pdf-extractext-ms.git
+cd pdf-extractext-ms
 docker compose up --build
 ```
 
@@ -61,6 +64,7 @@ EXTRACTOR_URL=http://localhost:8080 uv run uvicorn presentation.main:app --reloa
 | `DB_NAME` | Nombre de la base de datos | `pdf_extractext` |
 | `EXTRACTOR_URL` | URL base del microservicio de extracción | `http://localhost:8080` |
 | `EXTRACTOR_TIMEOUT_SECONDS` | Timeout de cada llamada al extractor | `30` |
+| `EXTRACTOR_CONTEXT` | Solo para `docker compose`: de dónde se construye el extractor (URL git o carpeta local) | `https://github.com/bar-bii/Microservicios.git#<commit>` |
 
 ## Endpoints
 
