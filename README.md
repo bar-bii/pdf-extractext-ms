@@ -48,6 +48,16 @@ docker compose up --build
 
 La API queda en `http://localhost:8000` (Swagger en `/docs`). Cada réplica del extractor tiene un límite de 1 CPU y 1 GB de RAM.
 
+### Desarrollo vs. producción
+
+La imagen no usa `--reload`. El autoreload de uvicorn está solo en `docker-compose.override.yml`, que `docker compose` combina automáticamente con `docker-compose.yml` y es lo que usa `docker compose watch` para reflejar los cambios de código.
+
+Para correr sin autoreload (modo producción):
+
+```bash
+docker compose -f docker-compose.yml up --build
+```
+
 Desarrollo local contra un extractor ya levantado:
 
 ```bash
