@@ -1,6 +1,5 @@
 from typing import Annotated, Optional
 from contextlib import asynccontextmanager
-import os
 
 import httpx
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Request
@@ -56,9 +55,6 @@ app = FastAPI(
     description="API for PDF text extraction using Clean Architecture",
     version="0.1.0",
     lifespan=lifespan,
-    # El front se sirve en otro contenedor y nginx reenvía /api/* acá.
-    # root_path hace que Swagger y OpenAPI generen URLs con ese prefijo.
-    root_path=os.getenv("ROOT_PATH", ""),
 )
 
 
@@ -103,9 +99,10 @@ def _doc_to_response(doc: DocumentDTO) -> dict:
 
 
 @app.get("/")
-async def root():
-    """Redirect to the Swagger UI, honoring the public root path."""
-    return RedirectResponse(url=f"{app.root_path}/docs")
+async def root(request: Request):
+    """Redirect to the Swagger UI, honoring the proxy's root path."""
+    prefix = request.scope.get("root_path", "").rstrip("/")
+    return RedirectResponse(url=f"{prefix}/docs")
 
 @app.get("/health")
 async def health_check():
