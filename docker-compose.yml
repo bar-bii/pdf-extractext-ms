@@ -15,12 +15,13 @@ services:
   app:
     build: .
     ports:
-      - "8000:8000"
+      - "8002:8000"
     environment:
       DB_URL: mongodb://mongodb:27017
       DB_NAME: pdf_extractext
       EXTRACTOR_URL: http://traefik
       EXTRACTOR_TIMEOUT_SECONDS: "${EXTRACTOR_TIMEOUT_SECONDS:-30}"
+      ROOT_PATH: /api
     depends_on:
       mongodb:
         condition: service_healthy
@@ -41,6 +42,26 @@ services:
           path: pyproject.toml
         - action: rebuild
           path: uv.lock
+
+  # Front end estático en un contenedor aparte (12-Factor: un deployable por
+  # componente). nginx sirve la UI y reenvía /api/* a la app. Se construye desde
+  # GitHub fijado a un commit para que sea reproducible; se puede sobreescribir
+  # con WEB_CONTEXT (por ejemplo WEB_CONTEXT=. para desarrollo local).
+  web:
+    build:
+      context: ${WEB_CONTEXT:-https://github.com/bar-bii/pdf-extractext-web.git#2090d6cb9203029be76af96144d143a4ef89fbf0}
+      dockerfile: Dockerfile
+    image: pdf-extractext-web:latest
+    ports:
+      - "8000:80"
+    environment:
+      API_UPSTREAM: http://app:8000
+    depends_on:
+      app:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - pdf_net
 
   # Balanceador delante de las réplicas del microservicio de extracción.
   # Solo es accesible dentro de la red; el dashboard queda en loopback.
