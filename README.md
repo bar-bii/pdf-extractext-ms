@@ -7,10 +7,12 @@ Es la variante de `pdf-extractext` en la que la lógica de extracción ya no viv
 ## Cómo funciona
 
 ```
-cliente ──► app (:8000) ──► Traefik ──► extractor ×5   (microservicio de extracción)
-                │
-                └──► MongoDB
+cliente ──► web (:8000) ──/api──► app (:8002) ──► Traefik ──► extractor ×5
+                                      │
+                                      └──► MongoDB
 ```
+
+El front end vive en un contenedor separado ([`bar-bii/pdf-extractext-web`](https://github.com/bar-bii/pdf-extractext-web)): nginx sirve la interfaz estática y hace de reverse proxy de `/api/*` hacia esta API. Así cada componente es un deployable independiente (12-Factor).
 
 1. Recibe un PDF vía `multipart/form-data`.
 2. Calcula el SHA-256 del PDF. Si ya existe, responde `409` **sin llamar al extractor**.
@@ -28,6 +30,7 @@ Clean Architecture (`presentation → application ← data`):
 - `data/extractor_client.py` — `HttpPDFExtractor`, cliente `httpx` del microservicio.
 - `data/` — modelos Beanie y repositorios de MongoDB.
 - `presentation/main.py` — app FastAPI, wiring de dependencias y mapeo de errores.
+- `web` (otro repo) — front end estático servido por nginx, con proxy `/api`.
 
 ## Requisitos
 
@@ -36,9 +39,9 @@ Clean Architecture (`presentation → application ← data`):
 
 ## Arranque
 
-Alcanza con clonar este repo. El microservicio de extracción **no hace falta clonarlo**: Docker lo construye directo desde [`bar-bii/Microservicios`](https://github.com/bar-bii/Microservicios), fijado a un commit para que el build sea reproducible.
+Alcanza con clonar este repo. El microservicio de extracción y el front end **no hace falta clonarlos**: Docker los construye directo desde GitHub, fijados a un commit para que el build sea reproducible.
 
-Stack completo (MongoDB + app + Traefik + 5 réplicas del extractor):
+Stack completo (MongoDB + web + app + Traefik + 5 réplicas del extractor):
 
 ```bash
 git clone https://github.com/frankito-re/pdf-extractext-ms.git
@@ -46,7 +49,7 @@ cd pdf-extractext-ms
 docker compose up --build
 ```
 
-La API queda en `http://localhost:8000` (Swagger en `/docs`). Cada réplica del extractor tiene un límite de 1 CPU y 1 GB de RAM.
+La interfaz web queda en `http://localhost:8000`, con Swagger en `http://localhost:8000/api/docs`. La API también está publicada directo en `http://localhost:8002` (útil para pruebas con `curl`). Cada réplica del extractor tiene un límite de 1 CPU y 1 GB de RAM.
 
 ### Desarrollo vs. producción
 
@@ -75,6 +78,8 @@ EXTRACTOR_URL=http://localhost:8080 uv run uvicorn presentation.main:app --reloa
 | `EXTRACTOR_URL` | URL base del microservicio de extracción | `http://localhost:8080` |
 | `EXTRACTOR_TIMEOUT_SECONDS` | Timeout de cada llamada al extractor | `30` |
 | `EXTRACTOR_CONTEXT` | Solo para `docker compose`: de dónde se construye el extractor (URL git o carpeta local) | `https://github.com/bar-bii/Microservicios.git#<commit>` |
+| `ROOT_PATH` | Prefijo público de la API cuando está detrás del proxy (`/api` en compose) | vacío |
+| `WEB_CONTEXT` | Solo para `docker compose`: de dónde se construye el front end (URL git o carpeta local) | `https://github.com/bar-bii/pdf-extractext-web.git#<commit>` |
 
 ## Endpoints
 
@@ -86,6 +91,8 @@ EXTRACTOR_URL=http://localhost:8080 uv run uvicorn presentation.main:app --reloa
 | `GET` | `/documents/{id}` | Obtiene un documento |
 | `PATCH` | `/documents/{id}` | Actualiza texto y/o checksum |
 | `DELETE` | `/documents/{id}` | Elimina un documento |
+
+A través de la web, todas las rutas se consumen con el prefijo `/api` (por ejemplo `GET /api/health`).
 
 ### Errores de `POST /extract`
 
